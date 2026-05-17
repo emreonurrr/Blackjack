@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casino Royale Blackjack</title>
+    <style>
+        body {
+            background-color: #0c1912;
+            font-family: Arial, sans-serif;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* Giriş Ekranı (Intro) */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, #1a3c2b 0%, #0c1912 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        #intro-screen h1 {
+            font-size: 3rem;
+            color: #d4af37;
+            text-shadow: 0 0 20px rgba(214, 175, 55, 0.5);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* Ana Oyun Alanı */
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 1s ease 0.5s, transform 1s ease 0.5s;
+        }
+
+        .game-active .game-layout {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Sol Bilgi Paneli */
+        .values-sidebar {
+            background: #111a16;
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 15px;
+            width: 250px;
+            flex-shrink: 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .values-sidebar h2 {
+            color: #d4af37;
+            font-size: 1.2rem;
+            margin-top: 0;
+            text-align: center;
+            border-bottom: 1px solid #d4af37;
+            padding-bottom: 8px;
+        }
+
+        .sidebar-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .mini-card {
+            background: white;
+            color: black;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        .mini-card.red { color: #cd1a1a; }
+
+        /* Sağ Kumarhane Masası */
+        .table-outer {
+            background: #2a1a0a;
+            padding: 20px;
+            border-radius: 60px;
+            flex: 1;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.6);
+        }
+
+        .blackjack-table {
+            background: radial-gradient(circle, #0d5c3a 0%, #063319 100%);
+            border: 4px dashed rgba(212, 175, 55, 0.6);
+            border-radius: 45px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Görsel Deste Alanı */
+        .deck-area {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            width: 70px;
+            height: 105px;
+            background: linear-gradient(135deg, #a00, #500);
+            border: 2px solid white;
+            border-radius: 6px;
+            box-shadow: 3px 3px 0px #300, 6px 6px 0px #200, 9px 9px 15px rgba(0,0,0,0.6);
+        }
+
+        /* Başlıklar ve Küçük Yuvarlak Puan Rozetleri */
+        .title-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #e5c158;
+        }
+
+        .score-badge {
+            background: #000;
+            color: #f1c40f;
+            border: 2px solid #d4af37;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .hand-section {
+            margin-bottom: 25px;
+        }
+
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            min-height: 130px;
+            align-items: center;
+            padding: 5px;
+        }
+
+        /* Kart Görünümü ve Animasyonu */
+        .card {
+            background: white;
+            color: black;
+            width: 80px;
+            height: 120px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 8px;
+            box-sizing: border-box;
+            font-size: 1.4rem;
+            font-weight: bold;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+            position: relative;
+            
+            animation: deal-card 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes deal-card {
+            0% {
+                opacity: 0;
+                transform: translateY(-120px) translateX(120px) rotate(20deg) scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+            }
+        }
+
+        .card.red { color: #cd1a1a; }
+        
+        .card.card-back {
+            background: linear-gradient(135deg, #a00, #500);
+            border: 2px solid white;
+        }
+
+        /* Butonlar ve Animasyonları */
+        .controls { margin-top: 25px; }
+        
+        .btn {
+            border: none;
+            padding: 12px 30px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 8px;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Parlama ve Canlılık Efekti */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -50%;
+            width: 200%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            transition: 0.75s;
+            opacity: 0;
+        }
+
+        .btn:hover::after {
+            left: 120%;
+            opacity: 1;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .btn-start-game { background: #d4af37; color: black; font-size: 1.2rem; padding: 15px 40px; }
+        .btn-start-game:hover { background: #f1c40f; }
+
+        .btn-hit { background: #2ecc71; color: white; }
+        .btn-hit:hover { background: #27ae60; }
+
+        .btn-stand { background: #e74c3c; color: white; }
+        .btn-stand:hover { background: #c0392b; }
+
+        .btn-menu { background: #f1c40f; color: black; font-size: 1.1rem; padding: 12px 35px; border-radius: 10px; border: 2px solid #5a3d16; }
+        .btn-menu:hover { background: #ffeaa7; }
+
+        .btn:disabled {
+            background: #555 !important;
+            color: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn:disabled::after { display: none; }
+
+        /* Ahşap Sonuç Menüsü (Pop-up Overlay) */
+        .menu-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .menu-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .wood-panel {
+            background: linear-gradient(135deg, #4a2c11 0%, #2c1a0a 100%);
+            border: 6px double #d4af37;
+            border-radius: 20px;
+            padding: 35px 50px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9), inset 0 0 30px rgba(0,0,0,0.8);
+            transform: translateY(-100px);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 320px;
+        }
+
+        .menu-overlay.show .wood-panel {
+            transform: translateY(0);
+        }
+
+        .wood-panel h2 {
+            font-size: 2.5rem;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 4px 6px rgba(0,0,0,0.8);
+        }
+
+        /* Duruma göre başlık renkleri */
+        .panel-win h2 { color: #2ecc71; }
+        .panel-lose h2 { color: #e74c3c; }
+        .panel-draw h2 { color: #f1c40f; }
+
+        .player-final-score {
+            font-size: 1.3rem;
+            color: #f5f6fa;
+            margin-bottom: 25px;
+            border-top: 1px dashed rgba(212, 175, 55, 0.4);
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.4);
+            padding: 10px 0;
+        }
+
+        .player-final-score span {
+            color: #f1c40f;
+            font-weight: bold;
+            font-size: 1.6rem;
+        }
+        /* ========================= */
+/* PREMIUM INTRO */
+/* ========================= */
+
+#intro-screen{
+    overflow:hidden;
+    background:
+    radial-gradient(circle at top,#1d5137 0%,#08110d 70%);
+}
+
+#intro-screen::before{
+    content:'';
+    position:absolute;
+
+    width:900px;
+    height:900px;
+
+    border-radius:50%;
+
+    background:rgba(212,175,55,.08);
+
+    filter:blur(100px);
+
+    animation:pulseGlow 5s ease-in-out infinite;
+}
+
+@keyframes pulseGlow{
+    0%{
+        transform:scale(1);
+        opacity:.5;
+    }
+
+    50%{
+        transform:scale(1.15);
+        opacity:1;
+    }
+
+    100%{
+        transform:scale(1);
+        opacity:.5;
+    }
+}
+
+/* FLOATING SUITS */
+
+.intro-bg-cards{
+    position:absolute;
+    inset:0;
+}
+
+.floating-card{
+    position:absolute;
+
+    color:rgba(255,255,255,.04);
+
+    font-size:8rem;
+
+    font-weight:bold;
+
+    animation:floatCard linear infinite;
+}
+
+.floating-card:nth-child(1){
+    left:10%;
+    top:15%;
+    animation-duration:12s;
+}
+
+.floating-card:nth-child(2){
+    right:10%;
+    top:20%;
+    animation-duration:14s;
+}
+
+.floating-card:nth-child(3){
+    left:20%;
+    bottom:10%;
+    animation-duration:16s;
+}
+
+.floating-card:nth-child(4){
+    right:15%;
+    bottom:15%;
+    animation-duration:18s;
+}
+
+@keyframes floatCard{
+    0%{
+        transform:translateY(0px);
+    }
+
+    50%{
+        transform:translateY(-30px);
+    }
+
+    100%{
+        transform:translateY(0px);
+    }
+}
+
+/* LOGO */
+
+.intro-logo{
+    position:relative;
+    z-index:2;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+
+    animation:introFade 1.2s ease;
+}
+
+@keyframes introFade{
+    from{
+        opacity:0;
+        transform:translateY(40px) scale(.9);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0) scale(1);
+    }
+}
+
+/* CHIP */
+
+.casino-chip{
+    position:relative;
+
+    width:130px;
+    height:130px;
+
+    border-radius:50%;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    margin-bottom:35px;
+
+    background:
+    radial-gradient(circle,#f1c40f 0%,#a67c00 100%);
+
+    overflow:hidden;
+
+    box-shadow:
+    0 0 35px rgba(212,175,55,.45),
+    0 0 90px rgba(212,175,55,.25);
+}
+
+/* FAST OUTER RING */
+
+.casino-chip::before{
+    content:'';
+
+    position:absolute;
+    inset:0;
+
+    border-radius:50%;
+
+    border:9px dashed white;
+
+    animation:ringSpin 9s linear infinite;
+}
+
+/* ICON */
+
+.casino-chip span{
+    position:relative;
+    z-index:2;
+
+    font-size:3.2rem;
+
+    color:white;
+
+    text-shadow:
+    0 0 10px rgba(255,255,255,.6);
+
+    animation:iconSpin 9s linear infinite reverse;
+}
+
+@keyframes ringSpin{
+    from{
+        transform:rotate(0deg);
+    }
+
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+@keyframes iconSpin{
+    from{
+        transform:rotate(0deg);
+    }
+
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+/* TITLE */
+
+.intro-title{
+    display:flex;
+    flex-direction:column;
+
+    align-items:center;
+
+    line-height:.9;
+
+    margin:0;
+
+    font-size:5rem;
+
+    font-weight:900;
+
+    letter-spacing:6px;
+
+    text-transform:uppercase;
+}
+
+.white-text{
+    color:white;
+
+    text-shadow:
+    0 0 20px rgba(255,255,255,.2);
+}
+
+.gold-text{
+    color:#d4af37;
+
+    text-shadow:
+    0 0 15px rgba(212,175,55,.5),
+    0 0 40px rgba(212,175,55,.3);
+}
+
+.intro-line{
+    width:220px;
+    height:2px;
+
+    margin-top:25px;
+
+    background:
+    linear-gradient(
+        to right,
+        transparent,
+        #d4af37,
+        transparent
+    );
+}
+
+.intro-subtitle{
+    margin-top:18px;
+
+    color:#d0d0d0;
+
+    letter-spacing:4px;
+
+    font-size:1rem;
+
+    text-transform:uppercase;
+}
+
+/* BUTTON */
+
+.btn-start-game{
+    margin-top:35px;
+
+    background:
+    linear-gradient(135deg,#d4af37,#f1c40f);
+
+    color:black;
+
+    font-size:1.1rem;
+
+    padding:16px 45px;
+
+    border-radius:40px;
+
+    border:2px solid #fff0a6;
+
+    letter-spacing:3px;
+
+    box-shadow:
+    0 8px 20px rgba(0,0,0,.45),
+    0 0 30px rgba(212,175,55,.35);
+}
+
+.btn-start-game:hover{
+    transform:translateY(-4px) scale(1.03);
+
+    box-shadow:
+    0 12px 28px rgba(0,0,0,.55),
+    0 0 40px rgba(212,175,55,.5);
+}
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+
+    <div class="intro-bg-cards">
+        <div class="floating-card">♠</div>
+        <div class="floating-card">♥</div>
+        <div class="floating-card">♦</div>
+        <div class="floating-card">♣</div>
+    </div>
+
+    <div class="intro-logo">
+
+        <div class="casino-chip">
+            <span>♠</span>
+        </div>
+
+        <h1 class="intro-title">
+            <span class="white-text">CASINO</span>
+            <span class="gold-text">ROYALE</span>
+        </h1>
+
+        <div class="intro-line"></div>
+
+        <p class="intro-subtitle">
+            PREMIUM BLACKJACK EXPERIENCE
+        </p>
+
+        <button id="start-game-btn" class="btn btn-start-game">
+            MASAYA OTUR
+        </button>
+
+    </div>
+
+</div>
+
+    <div id="result-menu" class="menu-overlay">
+        <div id="wood-panel-box" class="wood-panel">
+            <h2 id="menu-title">KAZANDINIZ!</h2>
+            <div class="player-final-score">Skorunuz: <span id="menu-score">0</span></div>
+            <button id="menu-action-btn" class="btn btn-menu">TEKRAR OYNA</button>
+        </div>
+    </div>
+
+    <div class="game-layout">
+        
+        <div class="values-sidebar">
+            <h2>Kart Değerleri</h2>
+            <div class="sidebar-item">
+                <span class="mini-card">2</span>
+                <span class="mini-card red">10♥</span>
+                <p style="margin:5px 0 0 0;">Sayı Kartları: Üzerindeki değerdedir.</p>
+            </div>
+            <div class="sidebar-item">
+                <span class="mini-card">J</span>
+                <span class="mini-card red">Q♦</span>
+                <span class="mini-card">K</span>
+                <p style="margin:5px 0 0 0;">J, Q, K: 10 değerindedir.</p>
+            </div>
+            <div class="sidebar-item">
+                <span class="mini-card red">A♣</span>
+                <p style="margin:5px 0 0 0;">As (A): Duruma göre 1 veya 11 sayılır.</p>
+            </div>
+        </div>
+
+        <div class="table-outer">
+            <div class="blackjack-table">
+                
+                <div class="deck-area"></div>
+                
+                <div class="hand-section">
+                    <div class="title-container">
+                        <span class="section-title">Krupiye</span>
+                        <div id="dealer-score-badge" class="score-badge">-</div>
+                    </div>
+                    <div id="dealer-cards" class="cards-container"></div>
+                </div>
+
+                <div class="hand-section">
+                    <div class="title-container">
+                        <span class="section-title">Oyuncu</span>
+                        <div id="player-score-badge" class="score-badge">-</div>
+                    </div>
+                    <div id="player-cards" class="cards-container"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="hit-btn" class="btn btn-hit">Kart Çek</button>
+                    <button id="stand-btn" class="btn btn-stand">Kal</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let deck = [];
+        let playerHand = [];
+        let dealerHand = [];
+        let isGameActive = false;
+
+        const introScreen = document.getElementById('intro-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+        
+        const hitBtn = document.getElementById('hit-btn');
+        const standBtn = document.getElementById('stand-btn');
+        
+        // Menü Elemanları
+        const resultMenu = document.getElementById('result-menu');
+        const woodPanelBox = document.getElementById('wood-panel-box');
+        const menuTitle = document.getElementById('menu-title');
+        const menuScore = document.getElementById('menu-score');
+        const menuActionBtn = document.getElementById('menu-action-btn');
+
+        const playerCardsDiv = document.getElementById('player-cards');
+        const dealerCardsDiv = document.getElementById('dealer-cards');
+        const playerScoreBadge = document.getElementById('player-score-badge');
+        const dealerScoreBadge = document.getElementById('dealer-score-badge');
+
+        const suits = ['♠', '♥', '♦', '♣'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        function buildAndShuffleDeck() {
+            deck = [];
+            for (let suit of suits) {
+                for (let value of values) {
+                    deck.push({ suit: suit, value: value });
+                }
+            }
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function calculateScore(hand) {
+            if (!hand || hand.length === 0) return 0;
+            let score = 0;
+            let aceCount = 0;
+
+            for (let card of hand) {
+                if (['J', 'Q', 'K'].includes(card.value)) {
+                    score += 10;
+                } else if (card.value === 'A') {
+                    aceCount += 1;
+                    score += 11;
+                } else {
+                    score += parseInt(card.value, 10);
+                }
+            }
+
+            while (score > 21 && aceCount > 0) {
+                score -= 10;
+                aceCount -= 1;
+            }
+
+            return score;
+        }
+
+        function renderCard(card, containerDiv, isHidden = false, delay = 0) {
+            const cardEl = document.createElement('div');
+            cardEl.classList.add('card');
+            cardEl.style.animationDelay = `${delay}s`;
+            
+            if (isHidden) {
+                cardEl.classList.add('card-back');
+            } else {
+                if (card.suit === '♥' || card.suit === '♦') {
+                    cardEl.classList.add('red');
+                }
+                cardEl.innerHTML = `
+                    <div style="text-align:left; line-height:1;">${card.value}<br>${card.suit}</div>
+                    <div style="text-align:center; font-size:2rem; margin-top:-5px;">${card.suit}</div>
+                `;
+            }
+            containerDiv.appendChild(cardEl);
+        }
+
+        function updateUI(showAllDealerCards = false, animate = false) {
+            playerCardsDiv.innerHTML = '';
+            dealerCardsDiv.innerHTML = '';
+
+            playerHand.forEach((card, index) => {
+                const delay = animate ? index * 0.15 : 0;
+                renderCard(card, playerCardsDiv, false, delay);
+            });
+
+            dealerHand.forEach((card, index) => {
+                const delay = animate ? (index + 2) * 0.15 : 0;
+                if (index === 1 && !showAllDealerCards) {
+                    renderCard(card, dealerCardsDiv, true, delay);
+                } else {
+                    renderCard(card, dealerCardsDiv, false, delay);
+                }
+            });
+
+            const pScore = calculateScore(playerHand);
+            let dScore = 0;
+
+            if (showAllDealerCards) {
+                dScore = calculateScore(dealerHand);
+            } else if (dealerHand.length > 0) {
+                dScore = calculateScore([dealerHand[0]]);
+            }
+
+            playerScoreBadge.textContent = pScore;
+            dealerScoreBadge.textContent = dScore;
+        }
+
+        function startGame() {
+            // Önceki menüyü kapat
+            resultMenu.classList.remove('show');
+
+            buildAndShuffleDeck();
+            playerHand = [deck.pop(), deck.pop()];
+            dealerHand = [deck.pop(), deck.pop()];
+            
+            isGameActive = true;
+            hitBtn.disabled = false;
+            standBtn.disabled = false;
+
+            updateUI(false, true);
+
+            if (calculateScore(playerHand) === 21) {
+                setTimeout(() => { openResultMenu('win'); }, 600);
+            }
+        }
+
+        // Yeni Ahşap Menüyü Açan Gelişmiş Fonksiyon
+        function openResultMenu(status) {
+            isGameActive = false;
+            hitBtn.disabled = true;
+            standBtn.disabled = true;
+
+            const finalScore = calculateScore(playerHand);
+            menuScore.textContent = finalScore;
+
+            // Sınıfları temizle
+            woodPanelBox.className = "wood-panel";
+
+            if (status === 'win') {
+                woodPanelBox.classList.add('panel-win');
+                menuTitle.textContent = "KAZANDINIZ!";
+                menuActionBtn.textContent = "TEKRAR OYNA";
+            } else if (status === 'lose') {
+                woodPanelBox.classList.add('panel-lose');
+                menuTitle.textContent = "KAYBETTİNİZ!";
+                menuActionBtn.textContent = "YENİDEN BAŞLA";
+            } else {
+                woodPanelBox.classList.add('panel-draw');
+                menuTitle.textContent = "BERABERE!";
+                menuActionBtn.textContent = "TEKRAR OYNA";
+            }
+
+            // Küçük bir gecikmeyle menüyü düşür (kart animasyonları bitebilsin diye)
+            setTimeout(() => {
+                resultMenu.classList.add('show');
+            }, 500);
+        }
+
+        hitBtn.addEventListener('click', () => {
+            if (!isGameActive) return;
+            playerHand.push(deck.pop());
+            
+            updateUI(false, false); 
+            const lastCard = playerCardsDiv.lastElementChild;
+            if(lastCard) lastCard.style.animationDelay = '0s';
+
+            if (calculateScore(playerHand) > 21) {
+                updateUI(true, false);
+                openResultMenu('lose');
+            }
+        });
+
+        standBtn.addEventListener('click', () => {
+            if (!isGameActive) return;
+
+            while (calculateScore(dealerHand) < 17) {
+                dealerHand.push(deck.pop());
+            }
+
+            updateUI(true, false);
+            
+            const finalPlayerScore = calculateScore(playerHand);
+            const finalDealerScore = calculateScore(dealerHand);
+
+            if (finalDealerScore > 21) {
+                openResultMenu('win');
+            } else if (finalPlayerScore > finalDealerScore) {
+                openResultMenu('win');
+            } else if (finalPlayerScore < finalDealerScore) {
+                openResultMenu('lose');
+            } else {
+                openResultMenu('draw');
+            }
+        });
+
+        // Menüdeki butona basıldığında oyunu tekrar başlatır
+        menuActionBtn.addEventListener('click', startGame);
+
+        // Giriş Butonuna Basıldığında Animasyonlu Geçiş Yap
+        startGameBtn.addEventListener('click', () => {
+            introScreen.style.opacity = '0';
+            introScreen.style.transform = 'translateY(-50px) scale(1.05)';
+            document.body.classList.add('game-active');
+            
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+                startGame();
+            }, 800);
+        });
+    </script>
+</body>
+</html>
