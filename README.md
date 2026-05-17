@@ -1,5 +1,5 @@
 # 🎮 Oynamak İçin
-## https://emreonurrr.github.io/blackjack/
+## https://emreonurrr.github.io/Blackjack/
 
 ---
 
